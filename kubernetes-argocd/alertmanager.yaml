@@ -1,0 +1,21 @@
+global:
+  slack_api_url: 'https://hooks.slack.com/services/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' # replace with your actual Slack webhook URL
+
+route:
+  group_by: ['alertname']
+  group_wait: 5s
+  group_interval: 1m
+  repeat_interval: 10m
+  receiver: 'slack'
+
+receivers:
+  - name: 'slack'
+    slack_configs: 
+      - channel: 'success-group' # Replace with your Slack channel
+        send_resolved: true
+        icon_emoji: ':bell:' # Optional: Emoji to use as the icon
+        text: |
+          *Alert:* {{ .CommonLabels.alertname }}
+          *Summary:* {{ .CommonAnnotations.summary }}
+          *Description:* {{ .CommonAnnotations.description }}
+          *Message:* {{ .CommonAnnotations.message }}

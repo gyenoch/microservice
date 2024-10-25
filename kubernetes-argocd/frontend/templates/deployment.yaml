@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+spec:
+  replicas: {{ .Values.deployment.replicas }}
+  selector:
+    matchLabels:
+      app: frontend
+      project: hipstershop
+      tier: web
+  template:
+    metadata:
+      labels:
+        app: frontend
+        project: hipstershop
+        tier: web
+    spec:
+      serviceAccountName: my-service-account 
+      containers:
+        - name: frontend
+          #image: "srikanthhg/frontend:{{ .Values.deployment.imageVersion }}"
+          image: "registry.gitlab.com/gyenoch1/microservice/frontend:{{ .Values.deployment.imageVersion }}"
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 8080
+          envFrom:
+          - configMapRef:
+              name: frontend
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      imagePullSecrets:
+        - name: my-registry-secret
+

@@ -1,0 +1,114 @@
+# https://github.com/actions/setup-python/issues/519
+name: python lang CI
+
+env:
+  APP_NAME: emailservice
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - 'main'
+  
+
+jobs:
+  checkout:
+    name: Checkout
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+  setup-python:
+    name: Python
+    runs-on: self-hosted
+    needs: checkout
+    container: python:3.12-slim
+    steps:
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+  trivy-fs-scan:
+    runs-on: self-hosted
+    needs: setup-python
+    steps:
+      - name: Trivy FS scan
+        run: |
+          trivy fs --format table -o fs.html .
+
+  sonar-scan:
+    runs-on: self-hosted
+    needs: trivy-fs-scan
+    steps:
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: SonarQube Quality Gate check
+        id: sonarqube-quality-gate-check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        # Force to fail step after specific time.
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  docker-image-build:
+    runs-on: self-hosted
+    needs: sonar-scan
+    steps:    
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build and push
+        run: |
+          docker build -t srikanthhg/$APP_NAME:${{ github.sha }} .
+      
+  trivy-image-scan:
+    runs-on: self-hosted
+    needs: docker-image-build
+    steps:
+      - name: Trivy Image Scan
+        run: |
+          trivy image --format table -o trivy-image-report.html srikanthhg/$APP_NAME:${{ github.sha }}
+
+  docker-login-push-image:
+    runs-on: self-hosted
+    needs: trivy-image-scan
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Docker Image
+        run: |
+            docker push srikanthhg/$APP_NAME:${{ github.sha }}
+
+  update-image-tag-in-helm:
+    runs-on: ubuntu-latest
+    needs: docker-login-push-image
+    steps:
+      - run: |
+          git config --global user.email ci-bot@argocd.com && git config --global user.name ci-bot
+          echo "cloning app repo"
+          git clone --no-checkout  https://oauth2:${{ secrets.GH_PAT }}@github.com/${{ github.repository_owner }}/kubernetes-argocd.git
+          cd kubernetes-argocd
+          git sparse-checkout set --cone
+          git sparse-checkout set $APP_NAME
+          echo "checkout source branch"
+          git checkout main
+          echo "updating image version in values file"
+          sed -i "s,imageVersion:.*,imageVersion:\ ${{ github.sha }}," $APP_NAME/values.yaml
+          git add . && git commit -m "update image version"
+          git push

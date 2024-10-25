@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: productcatalogservice
+data:
+  PORT: "3550"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: productcatalogservice
+  labels:
+    app: productcatalogservice
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: productcatalogservice
+      project: hipstershop
+      tier: app
+  template:
+    metadata:
+      labels:
+        app: productcatalogservice
+        project: hipstershop
+        tier: app
+    spec:
+      containers:
+        - name: productcatalog
+          image: srikanthhg/productcatalogservice:v1
+          ports:
+          - containerPort: 3550
+          envFrom:
+          - configMapRef:
+              name: productcatalogservice
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: productcatalogservice
+spec:
+  type: ClusterIP # by default ClusterIP
+  selector:
+    app: productcatalogservice
+    project: hipstershop
+    tier: app
+  ports:
+  - protocol: TCP
+    port: 3550 #service-port
+    targetPort: 3550 #container-port

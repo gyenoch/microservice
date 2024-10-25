@@ -1,0 +1,23 @@
+#https://argo-cd.readthedocs.io/en/release-1.8/user-guide/commands/argocd_app_manifests/
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: frontend
+  namespace: argocd
+spec:
+  project: default
+  source:
+    #repoURL: https://github.com/vajrapu-srikanth02/kubernetes-argocd.git
+    repoURL: https://gitlab.com/gyenoch1/microservice.git
+    targetRevision: main
+    path: kubernetes-argocd/frontend
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hipstershop
+  syncPolicy:
+    automated:
+      prune: true           
+      selfHeal: true           

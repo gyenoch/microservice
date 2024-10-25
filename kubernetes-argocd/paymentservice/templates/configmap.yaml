@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: paymentservice
+data:
+  PORT: "50051"
+  DISABLE_PROFILER: "1"

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: productcatalogservice
+  labels:
+    app: productcatalogservice
+spec:
+  replicas: {{ .Values.deployment.replicas }}
+  selector:
+    matchLabels:
+      app: productcatalogservice
+      project: hipstershop
+      tier: app
+  template:
+    metadata:
+      labels:
+        app: productcatalogservice
+        project: hipstershop
+        tier: app
+    spec:
+      serviceAccountName: my-service-account 
+      containers:
+        - name: productcatalog
+          image: "registry.gitlab.com/gyenoch1/microservice/productcatalogservice:{{ .Values.deployment.imageVersion }}"
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 3550
+          envFrom:
+          - configMapRef:
+              name: productcatalogservice
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      imagePullSecrets:
+        - name: my-registry-secret

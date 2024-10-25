@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: microservice
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: root-app-directory-approach
+  # finalizers:
+  # - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: hipstershop
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: kubernetes-argocd/app-of-apps
+    #repoURL: https://github.com/vajrapu-srikanth02/kubernetes-argocd.git
+    repoURL: https://gitlab.com/gyenoch1/microservice.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated: {}

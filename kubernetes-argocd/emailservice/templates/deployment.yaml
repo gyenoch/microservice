@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emailservice
+  labels:
+    app: emailservice
+spec:
+  replicas: {{ .Values.deployment.replicas }}
+  selector:
+    matchLabels:
+      app: emailservice
+      project: hipstershop
+      tier: app
+  template:
+    metadata:
+      labels:
+        app: emailservice
+        project: hipstershop
+        tier: app
+    spec:
+      serviceAccountName: my-service-account 
+      containers:
+        - name: email
+          image: "registry.gitlab.com/gyenoch1/microservice/emailservice:{{ .Values.deployment.imageVersion }}"
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 8080
+          envFrom:
+          - configMapRef:
+              name: emailservice
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      imagePullSecrets:
+        - name: my-registry-secret

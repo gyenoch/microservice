@@ -1,0 +1,170 @@
+image: alpine:3.19.3
+  
+stages:
+  - build
+  - test
+  - sonarscan
+  - dependency-check
+  - trivyfsscan
+  - imagebuild
+  - imagescan
+  - imagetagupdate
+
+default:
+  tags:
+    - CI-CD  #myec2runner
+
+variables:
+  DOCKER_HOST: tcp://docker:2376  
+  DOCKER_TLS_CERTDIR: "/certs"  
+  CI_PROJECT_NAME: "microservice"
+  CI_SERVICE_NAME: "adservice"
+  #SONAR_HOST_URL: "http://3.86.180.187:9000/"
+
+build-job:
+  image: eclipse-temurin:21
+  stage: build
+  before_script:
+    - cd adservice
+    - chmod +x gradlew
+  script:
+    - ./gradlew downloadRepos
+    - ./gradlew installDist
+    - ls -R build
+
+test:
+  needs: [build-job]
+  image: eclipse-temurin:21
+  stage: test
+  before_script:
+    - cd adservice  
+    - chmod +x gradlew  
+  script:
+    - pwd
+    - ./gradlew test  
+    - ls -R build  
+  artifacts:
+    when: always
+    reports:
+      junit: adservice/Test-results/test-results.xml  
+    paths:
+      - adservice/coverage.html  
+
+
+sonarscan-job:
+  needs: [build-job]
+  stage: sonarscan
+  tags:
+    - CI-CD
+  image: 
+    name: sonarsource/sonar-scanner-cli:11
+    entrypoint: [""]
+  script:
+    - sonar-scanner -X -Dsonar.projectBaseDir=./adservice -Dsonar.projectKey=$CI_SERVICE_NAME -Dsonar.java.binaries=. -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_TOKEN -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=300
+
+  
+dependency-check-job:
+  needs: [sonarscan-job]
+  stage: dependency-check
+  image: 
+    name: snyk/snyk:gradle-jdk19
+    entrypoint: [""]
+  before_script:
+    - cd adservice  # Change to the adservice directory
+    - chmod +x gradlew
+  script: 
+    - snyk --version
+    - snyk auth $SNYK_TOKEN
+    ##- snyk test
+    - snyk monitor --org=gyenoch
+
+
+scanfs-job:
+  needs: [dependency-check-job]
+  stage: trivyfsscan
+  image: 
+    name: aquasec/trivy:0.54.1
+    entrypoint: [""]
+  before_script:
+    #- cd adservice  # Change to the adservice directory
+    - trivy clean --all
+  script:
+    - trivy fs --format table -o fs.html .
+  artifacts:
+    when: always
+    reports:
+      container_scanning: fs.html
+
+   
+imagebuild-job:
+  stage: imagebuild
+  needs: [scanfs-job]
+  image: 
+    name: docker:27.2.0-rc.1-dind-alpine3.20
+  services:
+    - name: docker:27.2.0-rc.1-dind
+  # variables:
+  #   DOCKER_HOST: unix:///var/run/docker.sock  
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker info || true  # Allow failure to capture logs
+  script:
+    - docker version
+    - docker network inspect bridge  # Inspect network configuration
+    - cd adservice  # Navigate to the adservice directory
+    - docker build -t $CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/$CI_SERVICE_NAME:$CI_COMMIT_SHA .
+    - docker push $CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/$CI_SERVICE_NAME:$CI_COMMIT_SHA
+
+
+scanimage-job:
+  stage: imagescan
+  needs: [imagebuild-job]
+  image: 
+    name: docker:27.2.0-rc.1-dind-alpine3.20
+  services:
+    - docker:27.2.0-rc.1-dind
+  # variables:
+  #    DOCKER_HOST: unix:///var/run/docker.sock
+  before_script:
+    - cd adservice
+    - export TRIVY_VERSION=$(wget -qO - "https://api.github.com/repos/aquasecurity/trivy/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+    - echo $TRIVY_VERSION
+    - wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -O - | tar -zxvf -
+    - ./trivy --version
+    - ./trivy clean --all
+    - docker system prune -af
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+      # Build report
+    - ./trivy image --cache-dir .trivycache/ --format template --template "@contrib/gitlab.tpl" -o gl-container-scanning-report.html $CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/$CI_SERVICE_NAME:$CI_COMMIT_SHA
+  artifacts:
+    when: always
+    reports:
+      container_scanning: adservice/gl-container-scanning-report.html
+
+
+update-image-tag-in-helm:
+  stage: imagetagupdate
+  needs: [scanimage-job]
+  image: bitnami/git:latest
+  script:  
+    - git config --global user.email "www.gyenoch@gmail.com"
+    - git config --global user.name "gyenoch"
+    - echo "Listing current directory contents"
+    - ls  # This shows you're in the correct directory
+    - echo "Checking out source branch in kubernetes-argocd"
+    - cd kubernetes-argocd
+    - ls
+    - echo $CI_SERVICE_NAME  
+    - echo "Updating image version in values file"
+    - sed -i "s,imageVersion:.*,imageVersion:\ $CI_COMMIT_SHA," $CI_SERVICE_NAME/values.yaml
+    - git checkout main
+    # Configure Git to use the token for authentication
+    - git remote set-url origin https://$CI_REGISTRY_USER:$CI_REGISTRY_PASSWORD@gitlab.com/$CI_PROJECT_NAMESPACE/microservice.git
+    - git add .
+    - git commit -m "Update image version to $CI_COMMIT_SHA [skip ci]"
+    - git push
+    #- git pull origin main
+  rules:
+    - changes:
+      - "adservice/**"

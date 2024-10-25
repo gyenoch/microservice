@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cartservice
+spec:
+  type: ClusterIP # by default ClusterIP
+  selector:
+    app: cartservice
+    project: hipstershop
+    tier: app
+  ports:
+  - protocol: TCP
+    port: 7070 #service-port
+    targetPort: 7070 #container-port

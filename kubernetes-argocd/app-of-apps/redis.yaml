@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: redis
+  namespace: argocd
+spec:
+  project: default
+  source:
+    #repoURL: https://github.com/vajrapu-srikanth02/kubernetes-argocd.git
+    repoURL: https://gitlab.com/gyenoch1/microservice.git
+    targetRevision: HEAD
+    path: kubernetes-argocd/redis
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hipstershop
+  syncPolicy:
+    automated:
+      prune: true 
+      selfHeal: true

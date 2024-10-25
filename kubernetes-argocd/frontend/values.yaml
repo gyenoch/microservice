@@ -1,0 +1,9 @@
+deployment:
+  replicas: 2
+  imageVersion: 779748e9948855681848f2646b1179320375f5b0
+  imagePullSecrets: my-registry-secret 
+
+autoscaling:
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 30

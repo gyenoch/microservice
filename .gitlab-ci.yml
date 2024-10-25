@@ -1,0 +1,81 @@
+stages:
+  - trigger
+
+# Triggering the adservice pipeline
+trigger_adservice:
+  stage: trigger
+  trigger:
+    include: 'adservice/.gitlab-ci.yml'
+  when: on_success  # Waits for the job to succeed
+
+# Triggering the checkoutservice pipeline after adservice
+trigger_checkoutservice:
+  stage: trigger
+  trigger:
+    include: 'checkoutservice/.gitlab-ci.yml'
+  when: on_success  
+  needs: ["trigger_adservice"]
+
+# Triggering the frontend pipeline after checkoutservice
+trigger_frontend:
+  stage: trigger
+  trigger:
+    include: 'frontend/.gitlab-ci.yml'
+  when: on_success
+  needs: ["trigger_checkoutservice"]
+
+# Triggering the cartservice pipeline after frontend
+trigger_cartservice:
+  stage: trigger
+  trigger:
+    include: 'cartservice/.gitlab-ci.yml'
+  when: on_success
+  needs: ["trigger_frontend"]
+
+# Triggering the recommendationservice pipeline after cartservice
+trigger_recommendationservice:
+  stage: trigger
+  trigger:
+    include: 'recommendationservice/.gitlab-ci.yml'
+  when: on_success
+  needs: ["trigger_cartservice"]
+
+# Triggering the emailservice pipeline after recommendationservice
+trigger_emailservice:
+  stage: trigger
+  trigger:
+    include: 'emailservice/.gitlab-ci.yml'
+  when: on_success
+  needs: ["trigger_recommendationservice"]
+
+# Triggering the paymentservice pipeline after emailservice
+trigger_paymentservice:
+  stage: trigger
+  trigger:
+    include: 'paymentservice/.gitlab-ci.yml'
+  when: on_success
+  needs: ["trigger_emailservice"]
+
+# Triggering the currencyservice pipeline after paymentservice
+trigger_currencyservice:
+  stage: trigger
+  trigger:
+    include: 'currencyservice/.gitlab-ci.yml'
+  when: on_success
+  needs: ["trigger_paymentservice"]
+
+# Triggering the productcatalogservice pipeline after currencyservice
+trigger_productcatalogservice:
+  stage: trigger
+  trigger:
+    include: 'productcatalogservice/.gitlab-ci.yml'
+  when: on_success
+  needs: ["trigger_currencyservice"]
+
+# Triggering the shippingservice pipeline after productcatalogservice
+trigger_shippingservice:
+  stage: trigger
+  trigger:
+    include: 'shippingservice/.gitlab-ci.yml'
+  when: on_success
+  needs: ["trigger_productcatalogservice"]

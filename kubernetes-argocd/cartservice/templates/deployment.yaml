@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cartservice
+  labels:
+    app: cartservice
+spec:
+  replicas: {{ .Values.deployment.replicas }}
+  selector:
+    matchLabels:
+      app: cartservice
+      project: hipstershop
+      tier: app
+  template:
+    metadata:
+      labels:
+        app: cartservice
+        project: hipstershop
+        tier: app
+    spec:
+      serviceAccountName: my-service-account 
+      containers:
+        - name: cart
+          image: "registry.gitlab.com/gyenoch1/microservice/cartservice:{{ .Values.deployment.imageVersion }}"
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 7070
+          envFrom:
+          - configMapRef:
+              name: cartservice
+          resources:
+            requests:
+              cpu: 200m
+              memory: 64Mi
+            limits:
+              cpu: 300m
+              memory: 128Mi
+      imagePullSecrets:
+        - name: my-registry-secret

@@ -1,0 +1,6 @@
+kubectl_installation.txt
+don't_delete.tf
+k8ssecret-file
+my-registry-secret.yaml
+config.json
+eks-cluster.yaml

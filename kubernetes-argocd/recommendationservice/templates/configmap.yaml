@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: recommendationservice
+data:
+  PORT: "8080"
+  DISABLE_PROFILER: "1"
+  PYTHONUNBUFFERED: "1"
+  PRODUCT_CATALOG_SERVICE_ADDR: "productcatalogservice:3550"

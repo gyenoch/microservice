@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paymentservice
+  labels:
+    app: paymentservice
+spec:
+  replicas: {{ .Values.deployment.replicas }}
+  selector:
+    matchLabels:
+      app: paymentservice
+      project: hipstershop
+      tier: app
+  template:
+    metadata:
+      labels:
+        app: paymentservice
+        project: hipstershop
+        tier: app
+    spec:
+      serviceAccountName: my-service-account 
+      containers:
+        - name: payment
+          image: "registry.gitlab.com/gyenoch1/microservice/paymentservice:{{ .Values.deployment.imageVersion }}"
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 50051
+          envFrom:
+          - configMapRef:
+              name: paymentservice
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      imagePullSecrets:
+        - name: my-registry-secret
