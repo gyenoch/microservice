@@ -13,7 +13,7 @@ registry.gitlab.com/gyenoch1/microservice/currencyservice
 
 kubectl get secret my-registry-secret -n hipstershop -o jsonpath="{.data.\.dockerconfigjson}" | base64 --decode
 
-
+kubectl get secret --namespace monitoring monitoring-grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
 
 helm uninstall aws-load-balancer-controller -n kube-system
 kubectl get all -n kube-system | grep aws-load-balancer-controller
@@ -67,8 +67,5 @@ kubectl describe clusterrole aws-load-balancer-controller
 aws eks describe-cluster --name $CLUSTER_NAME --query "cluster.resourcesVpcConfig.subnetIds"
 
 curl "http://monitoring-kube-prometheus-prometheus.monitoring:80/api/v1/query?query=up"
-
-https://hooks.slack.com/services/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
-
 
 curl -X POST --data-urlencode "payload={\"channel\": \"success-group\", \"username\": \"webhookbot\", \"text\": \"This is posted to #my-channel-here and comes from a bot named webhookbot.\", \"icon_emoji\": \":ghost:\"}" $SLACK_URL <add-your-slack-url-here>
