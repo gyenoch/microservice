@@ -44,7 +44,7 @@ With this setup, you're equipped with a resilient, scalable, and secure framewor
 🔗 Explore this project to master Blue-Green Deployment and CI/CD pipelines!
 
 ## Getting Started
-To get started with this project, refer to our [comprehensive guide](https://medium.com/@www.gyenoch/mastering-3-tier-application-blue-green-deployment-on-aws-eks-a-step-by-step-guide-to-483795073e9f) that walks you through infrastructure provisioning, CI/CD pipeline configuration, EKS cluster creation, and more.
+To get started with this project, refer to our [comprehensive guide](https://medium.com/@www.gyenoch/building-resilient-production-grade-microservices-a-comprehensive-devsecops-guide-using-aws-eks-fd7473313b4e) that walks you through infrastructure provisioning, CI/CD pipeline configuration, EKS cluster creation, and more.
 
 ## Contributing
 We welcome contributions! If you have ideas for enhancements or find any issues, please open a pull request or file an issue.
